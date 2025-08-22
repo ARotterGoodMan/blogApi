@@ -7,18 +7,29 @@
 
 import uuid
 from hashlib import md5
-
 from src import function as func
 
 
+def checkToken(token):
+    if not token:
+        return {'status': 400, 'message': 'token是必需的'}
+    sql = f"SELECT user_id FROM Login WHERE token = '{token}'"
+    login_data = func.fetchone(sql)
+    if not login_data:
+        return {'status': 404, 'message': '未找到登录记录'}
+    return {
+        'status': 200,
+        'message': 'token验证成功',
+        'data': {
+            'user_id': login_data[0]
+        }
+    }
+
+
 def login(data):
-    sql = ''
-    if data['email']:
-        sql = f"SELECT id,username,password,salt,email,Admin FROM Users WHERE " \
-              f"email = '{data['email']}'"
-    elif data['phone']:
-        sql = f"SELECT id,username,password,salt,email,Admin FROM Users WHERE " \
-              f"phone= '{data['phone']}'"
+    sql = f"SELECT id,username,password,salt,email,Admin FROM Users WHERE " \
+          f"email = '{data['email']}'"
+
     select_data = func.fetchone(sql)
     if select_data:
         if select_data[2] == md5((data['password'] + select_data[3]).encode('utf-8')).hexdigest():
@@ -47,8 +58,9 @@ def login(data):
 
 
 def logout(data):
-    if not data or 'token' not in data:
-        return {'status': 400, 'message': 'token是必需的'}
+    check_token = checkToken(data['token'])
+    if check_token['status'] != 200:
+        return check_token
     sql = f"SELECT id FROM Login WHERE token = '{data['token']}'"
     login_data = func.fetchone(sql)
     if not login_data:
@@ -79,13 +91,11 @@ def register(data):
 
 
 def getAllUsers(token):
-    if not token:
-        return {'status': 400, 'message': 'token是必需的'}
-    sql = f"SELECT user_id FROM Login WHERE token = '{token}'"
-    login_data = func.fetchone(sql)
-    if not login_data:
-        return {'status': 404, 'message': '未找到登录记录'}
-    sql = f"SELECT Admin FROM Users WHERE id = {login_data[0]}"
+    check_token = checkToken(token)
+    if check_token['status'] != 200:
+        return check_token
+    user_id = check_token['data']['user_id']
+    sql = f"SELECT Admin FROM Users WHERE id = {user_id}"
     user_data = func.fetchone(sql)
     if not user_data or not user_data[0]:
         return {'status': 403, 'message': '权限不足'}
@@ -111,18 +121,19 @@ def resetPassword(data):
 
 
 # 修改用户信息
-def updateUser(data):
-    if not data or 'token' not in data:
-        return {'status': 400, 'message': 'token是必需的'}
+def updateUser(token, data):
+    check_token = checkToken(token)
+    if check_token['status'] != 200:
+        return check_token
 
-    sql = f"SELECT user_id FROM Login WHERE token = '{data['token']}'"
-    login_data = func.fetchone(sql)
-    if not login_data:
-        return {'status': 404, 'message': '未找到登录记录'}
-
-    user_id = login_data[0]
-
-    # 更新用户信息
+    user_id = check_token['data']['user_id']
+    sql = f"SELECT Admin FROM Users WHERE id = {user_id}"
+    user_data = func.fetchone(sql)
+    if 'id' in data and data['id'] != user_id:
+        sql = f"SELECT Admin FROM Users WHERE id = {user_id}"
+        target_user_data = func.fetchone(sql)
+        if not target_user_data or not target_user_data[0]:
+            return {'status': 403, 'message': '权限不足'}
     update_fields = []
     if 'username' in data:
         update_fields.append(f"username = '{data['username']}'")
@@ -140,21 +151,21 @@ def updateUser(data):
     if not update_fields:
         return {'status': 400, 'message': '没有提供要更新的信息'}
 
-    sql = f"UPDATE Users SET {', '.join(update_fields)} WHERE id = {user_id}"
+    sql = f"UPDATE Users SET {', '.join(update_fields)} WHERE id = {
+    (data['id']) if 'id' in data else user_id
+    }"
     func.execute_query(sql)
 
     return {'status': 200, 'message': '用户信息更新成功'}
 
 
-
 def deleteUser(token, data):
-    if not token:
-        return {'status': 400, 'message': 'token是必需的'}
-    sql = f"SELECT user_id FROM Login WHERE token = '{token}'"
-    login_data = func.fetchone(sql)
-    if not login_data:
-        return {'status': 404, 'message': '未找到登录记录'}
-    sql = f"SELECT Admin FROM Users WHERE id = {login_data[0]}"
+    check_token = checkToken(token)
+    if check_token['status'] != 200:
+        return check_token
+
+    user_id = check_token['data']['user_id']
+    sql = f"SELECT Admin FROM Users WHERE id = {user_id}"
     user_data = func.fetchone(sql)
     if not user_data or not user_data[0]:
         return {'status': 403, 'message': '权限不足'}

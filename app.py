@@ -44,6 +44,14 @@ def get_all():
     token = request.headers.get('Authorization')
     return SERVER.getAllUsers(token)
 
+@app.route('/api/updateUser', methods=['POST'])
+def get_user():
+    token = request.headers.get('Authorization')
+    data = request.json
+    if  not data:
+        return {"error": "No data provided"}, 400
+    return SERVER.updateUser(token, data)
+
 
 @app.route('/api/delete_user', methods=['POST'])
 def delete_user():
