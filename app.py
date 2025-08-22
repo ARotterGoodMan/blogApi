@@ -39,6 +39,20 @@ def register():
     return SERVER.register(data)
 
 
+@app.route('/api/get_all', methods=['Post'])
+def get_all():
+    token = request.headers.get('Authorization')
+    return SERVER.getAllUsers(token)
+
+
+@app.route('/api/delete_user', methods=['POST'])
+def delete_user():
+    token = request.headers.get('Authorization')
+    data = request.json
+    if not data:
+        return {"error": "No data provided"}, 400
+    return SERVER.deleteUser(token, data)
+
+
 if __name__ == '__main__':
-    # print(md5(("Shao264419" + "6a8497d2-6231-4bf9-b3c5-2d89b1b22f50").encode('utf-8')).hexdigest())
     app.run(host='0.0.0.0', port=5000, debug=True)

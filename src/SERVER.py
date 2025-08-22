@@ -12,21 +12,23 @@ from src import function as func
 
 
 def login(data):
-    sql =''
+    sql = ''
     if data['email']:
-        sql = f"SELECT id,username,password,salt,email,phone,Admin,token FROM Users WHERE " \
+        sql = f"SELECT id,username,password,salt,email,Admin FROM Users WHERE " \
               f"email = '{data['email']}'"
     elif data['phone']:
-        sql = f"SELECT id,username,password,salt,email,phone,Admin,token FROM Users WHERE " \
+        sql = f"SELECT id,username,password,salt,email,Admin FROM Users WHERE " \
               f"phone= '{data['phone']}'"
     select_data = func.fetchone(sql)
     if select_data:
-        # if select_data[7] and select_data[7] != 'null':
-        #     return {'status': 403, 'message': 'User already logged in'}
-        print(data['password'], select_data[2],md5((data['password'] + select_data[3]).encode('utf-8')).hexdigest())
         if select_data[2] == md5((data['password'] + select_data[3]).encode('utf-8')).hexdigest():
+            # 检查设备是否已登录
+            sql = f"SELECT token FROM Login WHERE user_id = {select_data[0]}"
+            login_data = func.fetchall(sql)
+            if len(login_data) >= 3:
+                return {'status': 403, 'message': '设备已到达登录上线. 请先注销一个设备后再登录'}
             token = str(uuid.uuid4())
-            sql = f"UPDATE Users SET token = '{token}' WHERE id = {select_data[0]}"
+            sql = f"insert into Login (user_id, token,ip_address) values ({select_data[0]}, '{token}','{data['ip_address']}')"
             func.execute_query(sql)
             return {
                 'status': 200,
@@ -34,8 +36,7 @@ def login(data):
                 'data': {
                     'username': select_data[1],
                     'email': select_data[4],
-                    'phone': select_data[5],
-                    'is_admin': select_data[6],
+                    'is_admin': select_data[5],
                     "token": token
                 }
             }
@@ -48,23 +49,14 @@ def login(data):
 def logout(data):
     if not data or 'token' not in data:
         return {'status': 400, 'message': 'token是必需的'}
+    sql = f"SELECT id FROM Login WHERE token = '{data['token']}'"
+    login_data = func.fetchone(sql)
+    if not login_data:
+        return {'status': 404, 'message': '未找到登录记录'}
+    sql = f"DELETE FROM Login WHERE token = '{data['token']}'"
+    func.execute_query(sql)
+    return {'status': 200, 'message': '注销成功'}
 
-    # 使用参数化查询查找用户
-    sql = "SELECT id, token FROM Users WHERE token=%s"
-    select_data = func.fetchone(sql, (data['token'],))
-    if select_data:
-        # 使用参数化查询更新
-        user_id = select_data[0]  # 假设第一列是id
-        sql = "UPDATE Users SET token=NULL WHERE id=%s"
-        func.execute_query(sql, (user_id,))
-        return {
-            'status': 200,
-            'message': '注销成功'
-        }
-    return {
-        'status': 404,
-        'message': '未找到用户或已注销'
-    }
 
 def register(data):
     sql = f"SELECT 'email' FROM Users WHERE email = '{data['email']}'"
@@ -78,9 +70,102 @@ def register(data):
 
     hashed_password = md5(password).hexdigest()
 
-    sql = f"INSERT INTO Users (username, password, salt, email, phone) VALUES " \
-          f"('{data['username']}', '{hashed_password}', '{salt}', '{data['email']}', '{data['phone']}')"
+    sql = f"INSERT INTO Users (username, password, salt, email) VALUES " \
+          f"('{data['username']}', '{hashed_password}', '{salt}', '{data['email']}')"
 
     func.execute_query(sql)
 
     return {'status': 201, 'message': '用户注册成功'}
+
+
+def getAllUsers(token):
+    if not token:
+        return {'status': 400, 'message': 'token是必需的'}
+    sql = f"SELECT user_id FROM Login WHERE token = '{token}'"
+    login_data = func.fetchone(sql)
+    if not login_data:
+        return {'status': 404, 'message': '未找到登录记录'}
+    sql = f"SELECT Admin FROM Users WHERE id = {login_data[0]}"
+    user_data = func.fetchone(sql)
+    if not user_data or not user_data[0]:
+        return {'status': 403, 'message': '权限不足'}
+    sql = "SELECT id, username, email,Admin FROM Users"
+    users = func.fetchall(sql)
+    if not users:
+        return {'status': 404, 'message': '没有找到用户'}
+
+    user_list = []
+    for user in users:
+        user_list.append({
+            'id': user[0],
+            'username': user[1],
+            'email': user[2],
+            'is_admin': user[3]
+        })
+
+    return {'status': 200, 'message': '获取用户列表成功', 'data': user_list}
+
+
+def resetPassword(data):
+    pass
+
+
+# 修改用户信息
+def updateUser(data):
+    if not data or 'token' not in data:
+        return {'status': 400, 'message': 'token是必需的'}
+
+    sql = f"SELECT user_id FROM Login WHERE token = '{data['token']}'"
+    login_data = func.fetchone(sql)
+    if not login_data:
+        return {'status': 404, 'message': '未找到登录记录'}
+
+    user_id = login_data[0]
+
+    # 更新用户信息
+    update_fields = []
+    if 'username' in data:
+        update_fields.append(f"username = '{data['username']}'")
+    if 'email' in data:
+        update_fields.append(f"email = '{data['email']}'")
+    if "password" in data:
+        salt = str(uuid.uuid4())
+        password = data['password'] + salt
+        password = password.encode('utf-8')
+        hashed_password = md5(password).hexdigest()
+        update_fields.append(f"password = '{hashed_password}'")
+        update_fields.append(f"salt = '{salt}'")
+    if "Admin" in data:
+        update_fields.append(f"Admin = {int(data['Admin'])}")
+    if not update_fields:
+        return {'status': 400, 'message': '没有提供要更新的信息'}
+
+    sql = f"UPDATE Users SET {', '.join(update_fields)} WHERE id = {user_id}"
+    func.execute_query(sql)
+
+    return {'status': 200, 'message': '用户信息更新成功'}
+
+
+
+def deleteUser(token, data):
+    if not token:
+        return {'status': 400, 'message': 'token是必需的'}
+    sql = f"SELECT user_id FROM Login WHERE token = '{token}'"
+    login_data = func.fetchone(sql)
+    if not login_data:
+        return {'status': 404, 'message': '未找到登录记录'}
+    sql = f"SELECT Admin FROM Users WHERE id = {login_data[0]}"
+    user_data = func.fetchone(sql)
+    if not user_data or not user_data[0]:
+        return {'status': 403, 'message': '权限不足'}
+    if 'user_id' not in data:
+        return {'status': 400, 'message': 'user_id是必需的'}
+    sql = f"SELECT id FROM Users WHERE id = {data['user_id']}"
+    target_user = func.fetchone(sql)
+    if not target_user:
+        return {'status': 404, 'message': '未找到目标用户'}
+    sql = f"DELETE FROM Users WHERE id = {data['user_id']}"
+    func.execute_query(sql)
+    sql = f"DELETE FROM Login WHERE user_id = {data['user_id']}"
+    func.execute_query(sql)
+    return {'status': 200, 'message': '用户删除成功'}
