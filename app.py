@@ -26,7 +26,6 @@ def logout():
     if not token:
         return {"error": "No token provided"}, 400
     data = {'token': token}
-    print(data)
     # Placeholder for logout logic
     return SERVER.logout(data)
 

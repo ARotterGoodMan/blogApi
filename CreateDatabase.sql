@@ -8,9 +8,10 @@ create table Users
     username   varchar(50)        not null,
     password   varchar(255)       not null,
     salt       varchar(255)       not null,
-    phone      varchar(15)        not null unique,
+    phone      varchar(15)        not null,
     email      varchar(100)       not null unique,
     Admin      int      default 0 null,
     token      varchar(255)       null,
     created_at datetime default current_timestamp
 );
+

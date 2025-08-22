@@ -12,6 +12,7 @@ from src import function as func
 
 
 def login(data):
+    sql =''
     if data['email']:
         sql = f"SELECT id,username,password,salt,email,phone,Admin,token FROM Users WHERE " \
               f"email = '{data['email']}'"
@@ -22,13 +23,14 @@ def login(data):
     if select_data:
         # if select_data[7] and select_data[7] != 'null':
         #     return {'status': 403, 'message': 'User already logged in'}
+        print(data['password'], select_data[2],md5((data['password'] + select_data[3]).encode('utf-8')).hexdigest())
         if select_data[2] == md5((data['password'] + select_data[3]).encode('utf-8')).hexdigest():
             token = str(uuid.uuid4())
             sql = f"UPDATE Users SET token = '{token}' WHERE id = {select_data[0]}"
             func.execute_query(sql)
             return {
                 'status': 200,
-                'message': 'Login successful',
+                'message': '登录成功',
                 'data': {
                     'username': select_data[1],
                     'email': select_data[4],
@@ -38,19 +40,18 @@ def login(data):
                 }
             }
         else:
-            return {'status': 401, 'message': 'Incorrect password'}
+            return {'status': 401, 'message': '密码不正确'}
     else:
-        return {'status': 404, 'message': 'User not found'}
+        return {'status': 404, 'message': '未找到用户'}
 
 
 def logout(data):
     if not data or 'token' not in data:
-        return {'status': 400, 'message': 'Token is required'}
+        return {'status': 400, 'message': 'token是必需的'}
 
     # 使用参数化查询查找用户
     sql = "SELECT id, token FROM Users WHERE token=%s"
     select_data = func.fetchone(sql, (data['token'],))
-    print(select_data)
     if select_data:
         # 使用参数化查询更新
         user_id = select_data[0]  # 假设第一列是id
@@ -58,28 +59,28 @@ def logout(data):
         func.execute_query(sql, (user_id,))
         return {
             'status': 200,
-            'message': 'Logout successful'
+            'message': '注销成功'
         }
     return {
         'status': 404,
-        'message': 'User not found or already logged out'
+        'message': '未找到用户或已注销'
     }
 
-    def register(data):
-        sql = f"SELECT 'email' FROM Users WHERE email = '{data['email']}' or phone= '{data['phone']}'"
-        existing_user = func.fetchone(sql)
-        if existing_user:
-            return {'status': 409, 'message': 'User already exists'}
+def register(data):
+    sql = f"SELECT 'email' FROM Users WHERE email = '{data['email']}'"
+    existing_user = func.fetchone(sql)
+    if existing_user:
+        return {'status': 409, 'message': '用户已存在'}
 
-        salt = str(uuid.uuid4())
-        password = data['password'] + salt
-        password = password.encode('utf-8')
+    salt = str(uuid.uuid4())
+    password = data['password'] + salt
+    password = password.encode('utf-8')
 
-        hashed_password = md5(password).hexdigest()
+    hashed_password = md5(password).hexdigest()
 
-        sql = f"INSERT INTO Users (username, password, salt, email, phone) VALUES " \
-              f"('{data['username']}', '{hashed_password}', '{salt}', '{data['email']}', '{data['phone']}')"
+    sql = f"INSERT INTO Users (username, password, salt, email, phone) VALUES " \
+          f"('{data['username']}', '{hashed_password}', '{salt}', '{data['email']}', '{data['phone']}')"
 
-        func.execute_query(sql)
+    func.execute_query(sql)
 
-        return {'status': 201, 'message': 'User registered successfully'}
+    return {'status': 201, 'message': '用户注册成功'}
