@@ -65,5 +65,20 @@ def delete_user():
     return SERVER.deleteUser(token, data)
 
 
+# 个人信息
+@app.route("/api/get_profile", methods=["POST"])
+def get_profile():
+    token = request.headers.get('Authorization')
+    return SERVER.get_profile(token)
+
+@app.route("/api/update_profile", methods=["POST"])
+def update_profile():
+    token = request.headers.get('Authorization')
+    data = request.json
+    if not data:
+        return {"error": "No data provided"}, 400
+    return SERVER.update_profile(token, data)
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

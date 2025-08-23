@@ -10,6 +10,7 @@ create table Users
     salt       varchar(255)       not null,
     email      varchar(100)       not null unique,
     Admin      int      default 0 null,
+    max_logins  int      default 3 null,
     created_at datetime default current_timestamp
 );
 
