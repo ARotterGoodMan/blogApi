@@ -1,7 +1,10 @@
+pysmx
 xlwt
 gmssl
 flask
-flask_cors
+pysmx
+bcrypt
 pymysql
 requests
+flask_cors
 pyinstaller

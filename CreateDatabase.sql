@@ -25,8 +25,10 @@ create table Login
 );
 
 # 删除字段
-alter table Users
-    drop column phone;
+# alter table Users
+#     drop column salt;
+
+# drop table KeyPairs;
 
 create table UserProfile
 (
@@ -41,4 +43,16 @@ create table UserProfile
     country     varchar(100)              null,
     postal_code varchar(20)               null,
     foreign key (user_id) references Users (id)
+);
+
+
+# 密钥对
+CREATE TABLE sm2_keys
+(
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    key_id      VARCHAR(32) UNIQUE NOT NULL,
+    private_key VARCHAR(64)        NOT NULL,
+    public_key  VARCHAR(130)       NOT NULL,
+    used        BOOLEAN   DEFAULT FALSE,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

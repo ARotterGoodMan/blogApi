@@ -1,13 +1,15 @@
 from flask import Flask, request
-from hashlib import md5
-
 from flask_cors import CORS
-
 from src import SERVER
 
 app = Flask(__name__)
 
 CORS(app, resources={r'/*': {"origins": ["http://127.0.0.1:5173", "http://localhost:5173"]}})
+
+
+@app.post("/api/generate_keys")
+def generate_keys():
+    return SERVER.generate_sm2_keypair()
 
 
 @app.route('/api/login', methods=['POST'])
@@ -44,11 +46,12 @@ def get_all():
     token = request.headers.get('Authorization')
     return SERVER.getAllUsers(token)
 
+
 @app.route('/api/updateUser', methods=['POST'])
 def get_user():
     token = request.headers.get('Authorization')
     data = request.json
-    if  not data:
+    if not data:
         return {"error": "No data provided"}, 400
     return SERVER.updateUser(token, data)
 
