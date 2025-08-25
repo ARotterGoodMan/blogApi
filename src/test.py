@@ -10,10 +10,10 @@ from email.mime.text import MIMEText
 from email.header import Header
 
 # 邮件服务器配置
-smtp_host = 'mail.svipsvip.xn--fiqs8s'  # poste.io 域名或IP
+smtp_host = 'smtp.qq.com'  # poste.io 域名或IP
 smtp_port = 587  # 587=Submission
-smtp_user = 'sxy@svipsvip.xn--fiqs8s'
-smtp_pass = 'Shao264419'  # 邮箱密码或生成的应用密码
+smtp_user = 'shaoxiaoyao696@qq.com'
+smtp_pass = 'jvsedefenlxjdjae'  # 邮箱密码或生成的应用密码
 
 # 邮件内容
 subject = '测试邮件'
@@ -29,7 +29,7 @@ try:
     server = smtplib.SMTP(smtp_host, smtp_port)
     server.starttls()  # 启用 TLS
     server.login(smtp_user, smtp_pass)
-    server.sendmail(smtp_user, ['2195007463@qq.com'], msg.as_string())
+    server.sendmail(smtp_user, ['sxy@svipsvip.xn--fiqs8s'], msg.as_string())
     print("邮件发送成功")
 except Exception as e:
     print("邮件发送失败:", e)
