@@ -33,7 +33,6 @@ def hash_password(password: str) -> str:
 
 
 def check_password(key_id, password: str, hashed: str) -> dict:
-    """验证密码"""
     sql = "SELECT private_key, public_key FROM sm2_keys where key_id = %s"
     key_data = func.fetchone(sql, (key_id,))
     if not key_data:
@@ -48,8 +47,15 @@ def check_password(key_id, password: str, hashed: str) -> dict:
         return response(500, "密文格式错误")
     plain_bytes = sm2_crypt.decrypt(cipher_bytes)
     password = plain_bytes.decode('utf-8')
+    if hashed == '':
+        sql = "DELETE FROM sm2_keys WHERE key_id = %s"
+        func.execute_query(sql, (key_id,))
+        return response(200, "密码解密完成", {"password": password})
+
     if not bcrypt.checkpw(password.encode("utf-8"), hashed.encode("utf-8")):
         return response(401, "密码不正确")
+    sql = "DELETE FROM sm2_keys WHERE key_id = %s"
+    func.execute_query(sql, (key_id,))
     return response(200, "密码正确")
 
 
@@ -86,7 +92,7 @@ def isAdmin(token, require_level=1):
 
 
 def login(data):
-    sql = "SELECT id, username, password, email, Admin,max_logins FROM Users WHERE email = %s"
+    sql = "SELECT user_id, username, password, email, Admin,max_logins FROM Users WHERE email = %s"
     select_data = func.fetchone(sql, (data["email"],))
     check_password_over = check_password(data['key_id'], data["password"], select_data[2])
     if check_password_over["status"] != 200:
@@ -107,8 +113,6 @@ def login(data):
     sql = "INSERT INTO Login (user_id, token, ip_address) VALUES (%s, %s, %s)"
     token = str(uuid.uuid4())
     func.execute_query(sql, (select_data[0], token, data["ip_address"]))
-    sql = "DELETE FROM sm2_keys WHERE key_id = %s"
-    func.execute_query(sql, (data['key_id'],))
 
     return response(200, "登录成功", {
         "username": select_data[1],
@@ -129,16 +133,27 @@ def logout(data):
 
 
 def register(data):
-    sql = "SELECT id FROM Users WHERE email = %s"
+    sql = "SELECT user_id FROM Users WHERE email = %s"
     existing_user = func.fetchone(sql, (data["email"],))
     if existing_user:
         return response(409, "用户已存在")
+    sql = "SELECT user_id FROM Users"
+    all_users = func.fetchall(sql)
+
+    if not all_users:
+        user_id = "0001"
+        data['Admin'] = 2  # 第一个注册的用户为管理员
+    else:
+        user_id = str(int(max(u[0] for u in all_users)) + 1).zfill(4)
+
+    checkPassword = check_password(data['key_id'], data["password"], '')["data"]["password"]
+    data['password'] = checkPassword
 
     hashed_password = hash_password(data["password"])
-    sql = "INSERT INTO Users (username, password, email,Admin) VALUES (%s, %s, %s,%s)"
+    sql = "INSERT INTO Users (user_id,username,password,email,Admin) VALUES (%s,%s, %s, %s,%s)"
     func.execute_query(sql,
-                       (data["username"], hashed_password, data["email"], data['Admin'] if 'Admin' in data else 0))
-
+                       (user_id, data["username"], hashed_password, data["email"],
+                        data['Admin'] if 'Admin' in data else 0))
     return response(201, "用户注册成功")
 
 
@@ -147,7 +162,7 @@ def getAllUsers(token):
     if is_admin["status"] != 200:
         return is_admin
 
-    sql = "SELECT id, username, email, Admin ,max_logins FROM Users"
+    sql = "SELECT user_id, username, email, Admin ,max_logins FROM Users"
     users = func.fetchall(sql)
     if not users:
         return response(404, "没有找到用户")
@@ -166,7 +181,7 @@ def updateUser(token, data):
     # 检查是否允许修改别人
     target_id = data.get("id", user_id)
     if target_id != user_id:
-        sql = "SELECT Admin FROM Users WHERE id = %s"
+        sql = "SELECT Admin FROM Users WHERE user_id = %s"
         admin_flag = func.fetchone(sql, (user_id,))
         if not admin_flag or int(admin_flag[0]) != 1:
             return response(403, "权限不足")
@@ -181,9 +196,13 @@ def updateUser(token, data):
         update_fields.append("email = %s")
         values.append(data["email"])
     if "password" in data:
-        hashed = hash_password(data["password"])
+        checkPassword = check_password(data['key_id'], data["password"], "")
+        hashed = hash_password(checkPassword)
         update_fields.append("password = %s")
         values.append(hashed)
+        sql = "DELETE FROM sm2_keys WHERE key_id = %s"
+        func.execute_query(sql, (data['key_id'],))
+
     if "Admin" in data:
         update_fields.append("Admin = %s")
         values.append(int(data["Admin"]))
@@ -195,7 +214,7 @@ def updateUser(token, data):
         return response(400, "没有提供要更新的信息")
 
     values.append(target_id)
-    sql = f"UPDATE Users SET {', '.join(update_fields)} WHERE id = %s"
+    sql = f"UPDATE Users SET {', '.join(update_fields)} WHERE user_id = %s"
     func.execute_query(sql, tuple(values))
     return response(200, "用户信息更新成功")
 
@@ -276,15 +295,15 @@ def update_profile(token, data):
         create table UserProfile
         (
             id          int auto_increment primary key,
-            user_id     int                       not null,
-            name        varchar(100)              not null,
+            user_id     int          not null,
+            name        varchar(100) not null,
             sex         enum ('男', '女', '保密') not null,
-            birth_date  date                      null,
-            phone       varchar(20)               null,
-            address     varchar(255)              null,
-            city        varchar(100)              null,
-            province     varchar(100)              null,
-            postal_code varchar(20)               null,
+            birth_date  date null,
+            phone       varchar(20) null,
+            address     varchar(255) null,
+            city        varchar(100) null,
+            province    varchar(100) null,
+            postal_code varchar(20) null,
             foreign key (user_id) references Users (id)
         );
         """
