@@ -5,8 +5,8 @@
 # @File       : SERVER.py
 # @ProjectName: BlogApi
 
-import uuid, os
 import bcrypt
+import uuid, os
 from gmssl import sm2
 from src import function as func
 
@@ -291,22 +291,6 @@ def update_profile(token, data):
         # 更新现有记录
         update_fields = []
         values = []
-        """
-        create table UserProfile
-        (
-            id          int auto_increment primary key,
-            user_id     int          not null,
-            name        varchar(100) not null,
-            sex         enum ('男', '女', '保密') not null,
-            birth_date  date null,
-            phone       varchar(20) null,
-            address     varchar(255) null,
-            city        varchar(100) null,
-            province    varchar(100) null,
-            postal_code varchar(20) null,
-            foreign key (user_id) references Users (id)
-        );
-        """
         if "name" in data:
             update_fields.append("name = %s")
             values.append(data["name"])
@@ -338,3 +322,66 @@ def update_profile(token, data):
         func.execute_query(sql, tuple(values))
 
     return {"status": 200, "message": "个人信息更新成功"}
+
+
+def reset_password(data):
+    return None
+
+
+def get_notes(token):
+    check_token = checkToken(token)
+    if check_token["status"] != 200:
+        return check_token
+    user_id = check_token["data"]["user_id"]
+    sql = "SELECT id, title, content, created_at, updated_at FROM notes WHERE user_id = %s"
+    notes = func.fetchall(sql, (user_id,))
+    if not notes:
+        return response(404, "没有找到笔记")
+
+    note_list = [
+        {"id": n[0],
+         "title": n[1],
+         "content": n[2],
+         "created_at": str(n[3]),
+         "updated_at": str(n[4])
+         } for n in notes
+    ]
+    return response(200, "获取笔记成功", note_list)
+
+
+def create_or_update_note(token, data):
+    check_token = checkToken(token)
+    if check_token["status"] != 200:
+        return check_token
+    user_id = check_token["data"]["user_id"]
+
+    if "title" not in data or "content" not in data:
+        return response(400, "标题和内容是必需的")
+
+    if "id" in data:
+        # 更新现有笔记
+        sql = "UPDATE notes SET title = %s, content = %s, updated_at = NOW() WHERE id = %s AND user_id = %s"
+        func.execute_query(sql, (data["title"], data["content"], data["id"], user_id))
+        return response(200, "笔记更新成功")
+    else:
+        # 创建新笔记
+        note_id = str(uuid.uuid4())
+        sql = "INSERT INTO notes (id,user_id, title, content) VALUES (%s,%s, %s, %s)"
+        func.execute_query(sql, (note_id, user_id, data["title"], data["content"]))
+        return response(201, "创建笔记成功")
+
+
+def delete_note(token, note_id):
+    check_token = checkToken(token)
+    if check_token["status"] != 200:
+        return check_token
+    user_id = check_token["data"]["user_id"]
+
+    sql = "SELECT id FROM notes WHERE id = %s AND user_id = %s"
+    note = func.fetchone(sql, (note_id, user_id))
+    if not note:
+        return response(404, "未找到目标笔记")
+
+    sql = "DELETE FROM notes WHERE id = %s AND user_id = %s"
+    func.execute_query(sql, (note_id, user_id))
+    return response(200, "笔记删除成功")

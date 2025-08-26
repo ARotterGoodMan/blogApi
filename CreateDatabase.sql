@@ -3,7 +3,7 @@ create database MyBlog;
 use MyBlog;
 
 
-drop table Login;
+# drop table Login;
 
 create table Users
 (
@@ -22,7 +22,7 @@ create table Login
 (
     id         int auto_increment primary key,
     user_id    varchar(50)  not null,
-    token      varchar(255) null,
+    token      varchar(255) not null,
     ip_address varchar(45)  not null,
     created_at datetime default current_timestamp,
     foreign key (user_id) references Users (user_id)
@@ -59,4 +59,16 @@ CREATE TABLE sm2_keys
     public_key  VARCHAR(130)       NOT NULL,
     used        BOOLEAN   DEFAULT FALSE,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+CREATE TABLE notes
+(
+    id         CHAR(36) PRIMARY KEY,
+    user_id    varchar(50)  not null,
+    title      VARCHAR(255) NOT NULL,
+    content    TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES Users (user_id) ON DELETE CASCADE
 );

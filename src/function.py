@@ -9,7 +9,7 @@ import pymysql
 
 def connect():
     return pymysql.connect(
-        host="47.92.254.227",
+        host="47.92.231.71",
         port=3306,
         user="sxy",
         password="Shao264419",
