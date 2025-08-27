@@ -10,10 +10,10 @@ import pymysql
 
 def connect():
     return pymysql.connect(
-        host="47.92.231.71",
+        host="",
         port=3306,
-        user="sxy",
-        password="Shao264419",
+        user="",
+        password="",
         database="MyBlog",
     )
 
