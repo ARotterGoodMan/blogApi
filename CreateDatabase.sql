@@ -2,9 +2,6 @@ create database MyBlog;
 
 use MyBlog;
 
-
-# drop table Login;
-
 create table Users
 (
     id         int auto_increment primary key,
@@ -28,11 +25,14 @@ create table Login
     foreign key (user_id) references Users (user_id)
 );
 
-# 删除字段
-# alter table Users
-#     drop column salt;
-
-# drop table KeyPairs;
+create table PasswordResets
+(
+    id          int auto_increment primary key,
+    user_id     varchar(50)  not null,
+    reset_token varchar(255) not null,
+    created_at  datetime default current_timestamp,
+    foreign key (user_id) references Users (user_id)
+);
 
 create table UserProfile
 (
@@ -50,7 +50,6 @@ create table UserProfile
 );
 
 
-# 密钥对
 CREATE TABLE sm2_keys
 (
     id          INT AUTO_INCREMENT PRIMARY KEY,
@@ -72,3 +71,10 @@ CREATE TABLE notes
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES Users (user_id) ON DELETE CASCADE
 );
+
+
+# 删除字段
+# alter table Users
+#     drop column salt;
+
+# drop table KeyPairs;

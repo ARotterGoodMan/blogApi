@@ -7,31 +7,34 @@
 
 import smtplib
 from email.mime.text import MIMEText
-from email.header import Header
+from email.utils import formataddr
 
 # 邮件服务器配置
-smtp_host = 'smtp.qq.com'  # poste.io 域名或IP
-smtp_port = 587  # 587=Submission
-smtp_user = 'shaoxiaoyao696@qq.com'
-smtp_pass = 'jvsedefenlxjdjae'  # 邮箱密码或生成的应用密码
+SMTP_SERVER = 'smtp.qq.com'  # poste.io 域名或IP
+SMTP_PORT = 465  # 587=Submission
+SMTP_USER = 'shaoxiaoyao696@qq.com'
+SMTP_PASS = 'qafizvtetegyebfe'  # 邮箱密码或生成的应用密码
 
-# 邮件内容
-subject = '测试邮件'
-body = '这是一封通过 poste.io 发送的测试邮件'
 
-msg = MIMEText(body, 'plain', 'utf-8')
-msg['Subject'] = Header(subject, 'utf-8')
-msg['From'] = smtp_user
-msg['To'] = '2195007463@qq.com'
+def send_reset_email(to_email, reset_link):
+    subject = "密码重置请求"
+    content = f"""
+        <p>您好，</p>
+        <p>您请求了重置密码，请点击下面的链接完成操作（1小时内有效）：</p>
+        <p><a href="{reset_link}">{reset_link}</a></p>
+        <p>如果这不是您的操作，请忽略此邮件。</p>
+        """
 
-# 连接 SMTP 服务器并发送邮件
-try:
-    server = smtplib.SMTP(smtp_host, smtp_port)
-    server.starttls()  # 启用 TLS
-    server.login(smtp_user, smtp_pass)
-    server.sendmail(smtp_user, ['sxy@svipsvip.xn--fiqs8s'], msg.as_string())
-    print("邮件发送成功")
-except Exception as e:
-    print("邮件发送失败:", e)
-finally:
-    server.quit()
+    msg = MIMEText(content, "html", "utf-8")
+    msg["From"] = formataddr(("Notes 应用", SMTP_USER))
+    msg["To"] = to_email
+    msg["Subject"] = subject
+
+    try:
+        server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT)
+        server.login(SMTP_USER, SMTP_PASS)
+        server.sendmail(SMTP_USER, [to_email], msg.as_string())
+        server.quit()
+        print(f"✅ 重置邮件已发送到 {to_email}")
+    except Exception as e:
+        print(f"❌ 发送邮件失败: {e}")

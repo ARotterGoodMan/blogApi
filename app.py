@@ -4,7 +4,9 @@ from src import SERVER
 
 app = Flask(__name__)
 
-CORS(app, resources={r'/*': {"origins": ["http://127.0.0.1:5173", "http://localhost:5173"]}})
+CORS(app, resources={
+    r'/*': {"origins": ["http://127.0.0.1:5173", "http://localhost:5173", "http://blog.svipsvip.xn--fiqs8s",
+                        "http://blog.svipsvip.中国"]}})
 
 
 @app.post("/api/generate_keys")
@@ -18,7 +20,6 @@ def login():
     if not data:
         return {"error": "No data provided"}, 400
 
-    # Placeholder for login logic
     return SERVER.login(data)
 
 
@@ -81,7 +82,15 @@ def update_profile():
     return SERVER.update_profile(token, data)
 
 
-@app.route("/api/reset_password")
+@app.route("/api/forgot_password", methods=["POST"])
+def forgot_password():
+    data = request.json
+    if not data:
+        return {"error": "No data provided"}, 400
+    return SERVER.forgot_password(data)
+
+
+@app.route("/api/reset_password", methods=["POST"])
 def reset_password():
     data = request.json
     if not data:
@@ -104,15 +113,12 @@ def get_notes():
         return SERVER.create_or_update_note(token, data)
 
 
-
-
-
-
 # 删除单条笔记
 @app.route('/api/del_notes/<note_id>', methods=['DELETE'])
 def delete_note(note_id):
     token = request.headers.get('Authorization')
     return {"message": f"删除笔记 {note_id} 成功"}
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

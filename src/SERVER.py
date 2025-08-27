@@ -8,7 +8,7 @@
 import bcrypt
 import uuid, os
 from gmssl import sm2
-from src import function as func
+from src import function as func, test
 
 
 def generate_sm2_keypair():
@@ -324,10 +324,6 @@ def update_profile(token, data):
     return {"status": 200, "message": "个人信息更新成功"}
 
 
-def reset_password(data):
-    return None
-
-
 def get_notes(token):
     check_token = checkToken(token)
     if check_token["status"] != 200:
@@ -358,8 +354,9 @@ def create_or_update_note(token, data):
     if "title" not in data or "content" not in data:
         return response(400, "标题和内容是必需的")
 
-    if "id" in data:
-        # 更新现有笔记
+    sql = "SELECT id FROM notes WHERE id = %s AND user_id = %s"
+    sel = func.fetchone(sql, (data.get("id", ""), user_id))
+    if "id" in data and sel:
         sql = "UPDATE notes SET title = %s, content = %s, updated_at = NOW() WHERE id = %s AND user_id = %s"
         func.execute_query(sql, (data["title"], data["content"], data["id"], user_id))
         return response(200, "笔记更新成功")
@@ -385,3 +382,41 @@ def delete_note(token, note_id):
     sql = "DELETE FROM notes WHERE id = %s AND user_id = %s"
     func.execute_query(sql, (note_id, user_id))
     return response(200, "笔记删除成功")
+
+
+def forgot_password(data):
+    email = data.get("email")
+    if not email:
+        return response(404, "email是必需的")
+    sql = "SELECT id, username FROM Users WHERE email = %s"
+    user = func.fetchone(sql, (email,))
+    if not user:
+        return response(404, "未找到用户")
+    user_id, username = user
+    # 生成重置令牌
+    reset_token = str(uuid.uuid4())
+    user_id = str(user_id).zfill(4)
+    sql = "INSERT INTO PasswordResets (user_id, reset_token) VALUES (%s, %s)"
+    func.execute_query(sql, (user_id, reset_token))
+    reset_link = f"http://localhost:5173/reset-password?token={reset_token}"
+    test.send_reset_email(email, reset_link)
+    return response(200, "重置密码邮件已发送，请检查您的邮箱")
+
+
+def reset_password(data):
+    reset_token = data.get("token")
+    new_password = data.get("new_password")
+    if not reset_token or not new_password:
+        return response(400, "token和新密码是必需的")
+    sql = "SELECT user_id FROM PasswordResets WHERE reset_token = %s"
+    reset_record = func.fetchone(sql, (reset_token,))
+    if not reset_record:
+        return response(404, "无效的重置令牌")
+    user_id = reset_record[0]
+    checkPassword = check_password(data['key_id'], new_password, "")["data"]["password"]
+    hashed_password = hash_password(checkPassword)
+    sql = "UPDATE Users SET password = %s WHERE user_id = %s"
+    func.execute_query(sql, (hashed_password, user_id))
+    sql = "DELETE FROM PasswordResets WHERE reset_token = %s"
+    func.execute_query(sql, (reset_token,))
+    return response(200, "重置密码成功")
