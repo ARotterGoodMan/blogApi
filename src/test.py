@@ -12,8 +12,8 @@ from email.utils import formataddr
 # 邮件服务器配置
 SMTP_SERVER = 'smtp.qq.com'  # poste.io 域名或IP
 SMTP_PORT = 465  # 587=Submission
-SMTP_USER = 'shaoxiaoyao696@qq.com'
-SMTP_PASS = 'qafizvtetegyebfe'  # 邮箱密码或生成的应用密码
+SMTP_USER = ''
+SMTP_PASS = ''  # 邮箱密码或生成的应用密码
 
 
 def send_reset_email(to_email, reset_link):

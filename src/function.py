@@ -14,7 +14,7 @@ def connect():
         port=3306,
         user="",
         password="",
-        database="MyBlog",
+        database="",
     )
 
 
