@@ -197,7 +197,7 @@ def updateUser(token, data):
         values.append(data["email"])
     if "password" in data:
         checkPassword = check_password(data['key_id'], data["password"], "")
-        hashed = hash_password(checkPassword)
+        hashed = hash_password(checkPassword["data"]["password"])
         update_fields.append("password = %s")
         values.append(hashed)
         sql = "DELETE FROM sm2_keys WHERE key_id = %s"
