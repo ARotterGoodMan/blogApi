@@ -5,8 +5,7 @@ from src import SERVER
 app = Flask(__name__)
 
 CORS(app, resources={
-    r'/*': {"origins": ["http://127.0.0.1:5173", "http://localhost:5173", "http://blog.svipsvip.xn--fiqs8s",
-                        "http://blog.svipsvip.中国"]}})
+    r'/*': {"origins": []}})
 
 
 @app.post("/api/generate_keys")
