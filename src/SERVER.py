@@ -8,7 +8,7 @@
 import bcrypt
 import uuid, os
 from gmssl import sm2
-from src import function as func, test
+from src import function as func, SendEmail
 
 
 def generate_sm2_keypair():

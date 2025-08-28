@@ -6,15 +6,16 @@
 # @ProjectName: BlogApi
 
 import pymysql
+from config import SERVER_HOST, SERVER_PORT, SERVER_USER, SERVER_PASSWORD, SERVER_DATABASE
 
 
 def connect():
     return pymysql.connect(
-        host="",
-        port=3306,
-        user="",
-        password="",
-        database="",
+        host=SERVER_HOST,
+        port=SERVER_PORT,
+        user=SERVER_USER,
+        password=SERVER_PASSWORD,
+        database=SERVER_DATABASE,
     )
 
 

@@ -1,12 +1,12 @@
 from flask import Flask, request
 from flask_cors import CORS
 from src import SERVER
+from src.config import origins
 
 app = Flask(__name__)
 
 CORS(app, resources={
-    r'/*': {"origins": ["http://127.0.0.1:5173", "http://localhost:5173", "http://blog.svipsvip.xn--fiqs8s",
-                        "http://blog.svipsvip.中国"]}})
+    r'/*': {"origins": origins}})
 
 
 @app.post("/api/generate_keys")
